@@ -28,7 +28,9 @@ spec:
                 replicas: 3
               persistence:
                 volumeClaimTemplates:
-                - spec:
+                - metadata:
+                    name: data
+                  spec:
                     accessModes: [ "ReadWriteOnce" ]
                     storageClassName: harvester-longhorn-bronze
                     resources:
@@ -39,7 +41,9 @@ spec:
           replicas: 3
         persistence:
           volumeClaimTemplates:
-          - spec:
+          - metadata:
+              name: data
+            spec:
               accessModes: [ "ReadWriteOnce" ]
               storageClassName: harvester-longhorn-bronze
               resources:
