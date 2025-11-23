@@ -2,83 +2,108 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: rancher-vcluster
+  name: ebyte-rancher-manager
 ---
 apiVersion: harvesterhci.io/v1beta1
 kind: Addon
 metadata:
-  name: rancher-vcluster
-  namespace: rancher-vcluster
+  name: rancher-manager
+  namespace: ebyte-rancher-manager
   labels:
     addon.harvesterhci.io/experimental: "true"
 spec:
   enabled: false
   repo: https://charts.loft.sh
-  version: v0.27.0
+  version: v0.30.1
   chart: vcluster
   valuesContent: |-
     serviceCIDR: 10.53.0.0/16
     controlPlane:
+      backingStore:
+        etcd:
+          deploy:
+            enabled: true
+            statefulSet:
+              highAvailability:
+                replicas: 3
+              persistence:
+                volumeClaimTemplates:
+                - spec:
+                    accessModes: [ "ReadWriteOnce" ]
+                    storageClassName: harvester-longhorn-bronze
+                    resources:
+                      requests:
+                        storage: 16Gi
+      statefulSet:
+        highAvailability:
+          replicas: 3
+        persistence:
+          volumeClaimTemplates:
+          - spec:
+              accessModes: [ "ReadWriteOnce" ]
+              storageClassName: harvester-longhorn-bronze
+              resources:
+                requests:
+                  storage: 16Gi
       distro:
-        k3s:
-          resources:
-            limits:
-              memory: 16096Mi
-              cpu: 8000m
+        k8s:
+          image:
+            registry: ghcr.io
+            repository: loft-sh/kubernetes
+            tag: v1.34.2
           enabled: true
           imagePullPolicy: IfNotPresent
-          image:
-            tag: v1.33.4-k3s1
-            repository: rancher/k3s
     sync:
+      fromHost:
+        secrets:
+          enabled: true
+          mappings:
+            byName:
+              "ebyte-rancher-manager/rancher-tls": "cattle-system/rancher-tls"
       toHost:
         ingresses:
           enabled: true
     experimental:
       deploy:
+        host:
+          manifests: |-
+            ---
+            apiVersion: cert-manager.io/v1
+            kind: Certificate
+            metadata:
+              name: rancher-tls
+              namespace: ebyte-rancher-manager
+            spec:
+              commonName: rancher.harvester.dued.eleasar.ch
+              dnsNames:
+                - rancher.harvester.dued.eleasar.ch
+              issuerRef:
+                kind: ClusterIssuer
+                name: cloudflare-clusterissuer
+              secretName: rancher-tls
         vcluster:
           manifests: |-
-            apiVersion: v1
-            kind: Namespace
-            metadata:
-              name: cattle-system
             ---
             apiVersion: v1
             kind: Namespace
             metadata:
-              name: cert-manager
-              labels:
-                certmanager.k8s.io/disable-validation: "true"
+              name: cattle-system
           helm:
-            - chart:
-                name: cert-manager
-                repo: https://charts.jetstack.io
-                version: v1.8.0
-              release:
-                name: cert-manager
-                namespace: cert-manager
-              values: |-
-                installCRDs: true
-
             - chart:
                 name: rancher
                 repo: https://releases.rancher.com/server-charts/latest
-                version: v2.12.0
+                version: v2.12.3
               release:
                 name: rancher
                 namespace: cattle-system
               values: |-
-                hostname: rancher.192.168.0.131.sslip.io
-                replicas: 1
-                bootstrapPassword: password1234
+                agentTLSMode: system-store
+                addLocal: true
+                hostname: rancher.harvester.dued.eleasar.ch
+                replicas: 3
+                bootstrapPassword: P@ssword123A
                 rancherImage: rancher/rancher
                 ingress:
                   tls:
-                    source: rancher
-                global:
-                  cattle:
-                    psp:
-                      enabled: "false"
-                extraEnv:
-                  - name: CATTLE_AGENT_IMAGE
-                    value: rancher/rancher-agent:v2.12.0
+                    secretName: rancher-tls
+                    source: secret
