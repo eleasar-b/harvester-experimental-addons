@@ -95,18 +95,16 @@ spec:
           helm:
             - chart:
                 name: rancher
-                repo: https://releases.rancher.com/server-charts/latest
+                repo: https://releases.rancher.com/server-charts/stable
                 version: v2.12.3
               release:
                 name: rancher
                 namespace: cattle-system
               values: |-
                 agentTLSMode: system-store
-                addLocal: true
                 hostname: rancher.harvester.dued.eleasar.ch
                 replicas: 3
                 bootstrapPassword: P@ssword123A
-                rancherImage: rancher/rancher
                 ingress:
                   tls:
                     secretName: rancher-tls
