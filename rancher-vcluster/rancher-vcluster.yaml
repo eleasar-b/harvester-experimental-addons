@@ -96,7 +96,7 @@ spec:
             - chart:
                 name: rancher
                 repo: https://releases.rancher.com/server-charts/stable
-                version: v2.12.3
+                version: 2.12.3
               release:
                 name: rancher
                 namespace: cattle-system
